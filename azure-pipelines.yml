@@ -7,7 +7,7 @@ trigger:
       - main
 
 pool:
-  vmImage: 'devops-vm-pool'
+  name: 'devops-vm-pool'
 
 variables:
   JAVA_VERSION: '17'
