@@ -1,6 +1,3 @@
-# CI Pipeline for Spring Boot Greeting API
-# Triggers automatically when code is pushed to the main branch
-
 trigger:
   branches:
     include:
@@ -9,13 +6,7 @@ trigger:
 pool:
   name: 'devops-vm-pool'
 
-variables:
-  JAVA_VERSION: '17'
-  MAVEN_CACHE_FOLDER: $(HOME)/.m2/repository
-  PROJECT_NAME: 'greeting-api'
-
 steps:
-  # Step 1: Set up Java 17
   - task: JavaToolInstaller@0
     displayName: 'Install Java 17'
     inputs:
@@ -23,16 +14,6 @@ steps:
       jdkArchitectureOption: 'x64'
       jdkSourceOption: 'PreInstalled'
 
-  # Step 2: Cache Maven dependencies (speeds up future builds)
-  - task: Cache@2
-    displayName: 'Cache Maven dependencies'
-    inputs:
-      key: 'maven | "$(Agent.OS)" | pom.xml'
-      restoreKeys: |
-        maven | "$(Agent.OS)"
-      path: $(MAVEN_CACHE_FOLDER)
-
-  # Step 3: Build and test with Maven
   - task: Maven@4
     displayName: 'Maven Build and Test'
     inputs:
@@ -44,7 +25,6 @@ steps:
       javaHomeOption: 'JDKVersion'
       jdkVersionOption: '1.17'
 
-  # Step 4: Copy the JAR artifact to staging directory
   - task: CopyFiles@2
     displayName: 'Copy JAR to staging'
     inputs:
@@ -52,10 +32,9 @@ steps:
       Contents: '*.jar'
       TargetFolder: '$(Build.ArtifactStagingDirectory)'
 
-  # Step 5: Publish the JAR as a pipeline artifact
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Artifact'
     inputs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      ArtifactName: '$(PROJECT_NAME)-$(Build.BuildId)'
+      ArtifactName: 'greeting-api-$(Build.BuildId)'
       publishLocation: 'Container'
