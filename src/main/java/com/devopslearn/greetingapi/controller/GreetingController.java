@@ -11,11 +11,12 @@ import java.util.concurrent.atomic.AtomicLong;
 public class GreetingController {
 
     private final AtomicLong counter = new AtomicLong();
-    private static final String APP_VERSION = "1.0.0";
+    private static final String APP_VERSION = "1.1.0";
 
     @GetMapping("/api/greeting")
     public Greeting greeting(@RequestParam(value = "name", defaultValue = "World") String name) {
-        return new Greeting(counter.incrementAndGet(), String.format("Hello, %s!", name));
+    return new Greeting(counter.incrementAndGet(), String.format("Welcome to DevOps, %s!", name));
+
     }
 
     @GetMapping("/api/health")
