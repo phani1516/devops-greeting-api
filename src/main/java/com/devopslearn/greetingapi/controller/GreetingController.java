@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class GreetingController {
 
     private final AtomicLong counter = new AtomicLong();
+    private static final String APP_VERSION = "1.0.0";
 
     @GetMapping("/api/greeting")
     public Greeting greeting(@RequestParam(value = "name", defaultValue = "World") String name) {
@@ -20,5 +21,10 @@ public class GreetingController {
     @GetMapping("/api/health")
     public String health() {
         return "UP";
+    }
+
+    @GetMapping("/api/version")
+    public String version() {
+        return APP_VERSION;
     }
 }
