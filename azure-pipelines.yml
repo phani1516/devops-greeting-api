@@ -3,43 +3,90 @@ trigger:
     include:
       - main
 
-pool:
-  name: 'devops-vm-pool'
-
 variables:
   JAVA_HOME_PATH: '/usr/lib/jvm/java-17-openjdk-amd64'
+  AZURE_SUBSCRIPTION: 'azure-student-connection'
+  APP_NAME: 'greeting-api-phani1516'
 
-steps:
-  - script: |
-      echo "JAVA_HOME: $(JAVA_HOME_PATH)"
-      export JAVA_HOME=$(JAVA_HOME_PATH)
-      java -version
-      mvn -version
-    displayName: 'Verify Java and Maven'
+stages:
+  # ==================== CI STAGE ====================
+  - stage: Build
+    displayName: 'CI - Build and Test'
+    pool:
+      name: 'devops-vm-pool'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build Spring Boot Application'
+        steps:
+          - script: |
+              echo "========================================="
+              echo "Agent: $(Agent.Name)"
+              echo "OS: $(Agent.OS)"
+              echo "JAVA_HOME: $(JAVA_HOME_PATH)"
+              echo "========================================="
+              export JAVA_HOME=$(JAVA_HOME_PATH)
+              java -version
+              mvn -version
+            displayName: 'Verify Java and Maven'
 
-  - script: |
-      export JAVA_HOME=$(JAVA_HOME_PATH)
-      mvn clean package -B
-    displayName: 'Maven Build and Test'
+          - script: |
+              export JAVA_HOME=$(JAVA_HOME_PATH)
+              mvn clean package -B
+            displayName: 'Maven Build and Test'
 
-  - task: PublishTestResults@2
-    displayName: 'Publish Test Results'
-    inputs:
-      testResultsFormat: 'JUnit'
-      testResultsFiles: '**/TEST-*.xml'
-      searchFolder: '$(System.DefaultWorkingDirectory)'
-    condition: always()
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/TEST-*.xml'
+              searchFolder: '$(System.DefaultWorkingDirectory)'
+            condition: always()
 
-  - task: CopyFiles@2
-    displayName: 'Copy JAR to staging'
-    inputs:
-      SourceFolder: 'target'
-      Contents: '*.jar'
-      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+          - task: CopyFiles@2
+            displayName: 'Copy JAR to staging'
+            inputs:
+              SourceFolder: 'target'
+              Contents: '*.jar'
+              TargetFolder: '$(Build.ArtifactStagingDirectory)'
 
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Artifact'
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      ArtifactName: 'greeting-api-$(Build.BuildId)'
-      publishLocation: 'Container'
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Artifact'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'greeting-api-drop'
+              publishLocation: 'Container'
+
+  # ==================== CD STAGE ====================
+  - stage: Deploy
+    displayName: 'CD - Deploy to Azure'
+    dependsOn: Build
+    condition: succeeded()
+    pool:
+      name: 'devops-vm-pool'
+    jobs:
+      - job: DeployJob
+        displayName: 'Deploy to Azure App Service'
+        steps:
+          - task: DownloadBuildArtifacts@1
+            displayName: 'Download Build Artifact'
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'greeting-api-drop'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          - script: |
+              echo "========================================="
+              echo "Listing downloaded artifacts:"
+              ls -lh $(System.ArtifactsDirectory)/greeting-api-drop/
+              echo "========================================="
+            displayName: 'List Artifacts'
+
+          - task: AzureWebApp@1
+            displayName: 'Deploy JAR to Azure App Service'
+            inputs:
+              azureSubscription: '$(AZURE_SUBSCRIPTION)'
+              appType: 'webAppLinux'
+              appName: '$(APP_NAME)'
+              package: '$(System.ArtifactsDirectory)/greeting-api-drop/greeting-api-0.0.1-SNAPSHOT.jar'
+              runtimeStack: 'JAVA|17-java17'
