@@ -6,24 +6,29 @@ trigger:
 pool:
   name: 'devops-vm-pool'
 
-steps:
-  - task: JavaToolInstaller@0
-    displayName: 'Install Java 17'
-    inputs:
-      versionSpec: '17'
-      jdkArchitectureOption: 'x64'
-      jdkSourceOption: 'PreInstalled'
+variables:
+  JAVA_HOME_PATH: '/usr/lib/jvm/java-17-openjdk-amd64'
 
-  - task: Maven@4
+steps:
+  - script: |
+      echo "JAVA_HOME: $(JAVA_HOME_PATH)"
+      export JAVA_HOME=$(JAVA_HOME_PATH)
+      java -version
+      mvn -version
+    displayName: 'Verify Java and Maven'
+
+  - script: |
+      export JAVA_HOME=$(JAVA_HOME_PATH)
+      mvn clean package -B
     displayName: 'Maven Build and Test'
+
+  - task: PublishTestResults@2
+    displayName: 'Publish Test Results'
     inputs:
-      mavenPomFile: 'pom.xml'
-      goals: 'clean package'
-      options: '-B'
-      publishJUnitResults: true
+      testResultsFormat: 'JUnit'
       testResultsFiles: '**/TEST-*.xml'
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '1.17'
+      searchFolder: '$(System.DefaultWorkingDirectory)'
+    condition: always()
 
   - task: CopyFiles@2
     displayName: 'Copy JAR to staging'
